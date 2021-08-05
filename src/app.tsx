@@ -1,80 +1,46 @@
 import * as React from 'react'
+import {useCallback, useEffect, useState} from 'react'
 import * as ReactDOM from 'react-dom'
 import {useVirtual} from "react-virtual";
-import {useInfiniteQuery, QueryClientProvider, QueryClient} from "react-query";
-import {useCallback, useEffect} from "react";
 import {useDebounce} from "use-debounce"
 
 //Remove pagination as it isn't needed
 document.querySelectorAll(".paging").forEach(x => x.outerHTML = null);
-
-// let cardItemsArray = [];
-// (async () => {
-//     let {origin, pathname, search} = window.location
-//
-//     let urlSearchParams = new URLSearchParams(search);
-//     urlSearchParams.set("page", "1");
-//
-//     let response = await fetch(`${origin}${pathname}?${urlSearchParams}`);
-//     let htmlText = await response.text();
-//
-//     let document = new DOMParser().parseFromString(htmlText, "text/html");
-//
-//     let cardItems = document.querySelectorAll(".cardItem")
-//     cardItems.forEach((x) => {
-//         let transform =
-//             {
-//                 cardImage: x.querySelector(".leftCol").querySelector("a").outerHTML,
-//                 cardText: x.querySelector(".cardInfo").outerHTML,
-//                 cardSetInfo: x.querySelector(".rightCol").innerHTML
-//             }
-//         cardItemsArray.push(transform);
-//     })
-// })();
 
 //Remove Card Table
 let element = document.querySelector(".cardItemTable");
 element.outerHTML = "<div class='cardItemTable'></div>";
 element = document.querySelector(".cardItemTable");
 
-// const Row = ({index, style}) => {
-//     return (
-//         <div style={style}>
-//             <div dangerouslySetInnerHTML={{__html: tableElements[index]?.outerHTML}}></div>
-//             {/*<div style={{display : "flex", flexDirection : "column"}}>*/}
-//             {/*    <div style={{background: "red"}} dangerouslySetInnerHTML={{__html: cardItemsArray[index]?.cardImage}}></div>*/}
-//             {/*    <div dangerouslySetInnerHTML={{__html: cardItemsArray[index]?.cardText}}></div>*/}
-//             {/*    <div dangerouslySetInnerHTML={{__html: cardItemsArray[index]?.cardSetInfo}}></div>*/}
-//             {/*</div>*/}
-//         </div>
-//     );
-// };
-
-let numberOfResults = Number.parseInt(/\d+/.exec(document.querySelector("#ctl00_ctl00_ctl00_MainContent_SubContent_SubContentHeader_searchTermDisplay").innerHTML)[0]);
+//Get total results
+const numberOfResults = Number.parseInt(/\d+/.exec(document.querySelector("#ctl00_ctl00_ctl00_MainContent_SubContent_SubContentHeader_searchTermDisplay").innerHTML)[0]);
 
 function RowVirtualizerDynamic({rows}) {
     const parentRef = React.useRef();
-
-    const estimateSize = useCallback(() => 150, []);
+    const DEFAULT_ROW_HEIGHT = 150;
+    const DEFAULT_PAGE_RESULTS_SIZE = 100;
 
     const rowVirtualizer = useVirtual({
         size: numberOfResults,
-        estimateSize,
+        estimateSize: useCallback(() => DEFAULT_ROW_HEIGHT, []),
         parentRef
     });
 
-    const [value] = useDebounce(rowVirtualizer?.virtualItems[0]?.index, 500);
+    const [topIndex] = useDebounce(rowVirtualizer?.virtualItems[0]?.index, 500);
+    const [cardResults, setCardResults] = useState<Array<Element>>(new Array(numberOfResults));
+    const [loadedPages, setLoadedPages] = useState<Set<Number>>(new Set());
 
     useEffect(() => {
-        console.log(value)
-    }, [value])
+        const pageIndex = (topIndex - topIndex % DEFAULT_PAGE_RESULTS_SIZE) / DEFAULT_PAGE_RESULTS_SIZE;
 
-    const infiniteResult = useInfiniteQuery("cards",
-        async ({queryKey, pageParam}) => {
+        if (loadedPages.has(pageIndex))
+            return;
+
+        const getRows = async () => {
             const {origin, pathname, search} = window.location
 
             const urlSearchParams = new URLSearchParams(search);
-            urlSearchParams.set("page", "1");
+            urlSearchParams.set("page", (pageIndex ).toString());
 
             const response = await fetch(`${origin}${pathname}?${urlSearchParams}`);
             const htmlText = await response.text();
@@ -82,15 +48,27 @@ function RowVirtualizerDynamic({rows}) {
             const document = new DOMParser().parseFromString(htmlText, "text/html");
 
             const tableElements: NodeListOf<Element> = document.querySelectorAll(".cardItemTable table");
-            return tableElements;
-        })
+            const results = Array.from(tableElements);
 
-    const {isLoading, data} = infiniteResult;
+            const updatedArray = new Array(numberOfResults);
 
-    const tableElements = data?.pages[0];
+            //Merge past results with the results we retrieved
+            for(let index = 0; index < cardResults.length; index++ ){
+                const pageIndexOffset = pageIndex * DEFAULT_PAGE_RESULTS_SIZE;
+                if(index >= pageIndexOffset  && index < pageIndexOffset + DEFAULT_PAGE_RESULTS_SIZE ) {
+                    updatedArray[index] = results[index - pageIndexOffset];
+                }
+                else {
+                    updatedArray[index] = cardResults[index];
+                }
+            }
 
-    if(isLoading)
-        return <div>loading</div>
+            setCardResults(updatedArray)
+            setLoadedPages(new Set([pageIndex, ...loadedPages]))
+        };
+
+        getRows();
+    }, [topIndex])
 
     return (
         <>
@@ -115,13 +93,10 @@ function RowVirtualizerDynamic({rows}) {
                                 width: "100%",
                                 transform: `translateY(${virtualRow.start}px)`
                             }}>
-                            <div>Row {virtualRow.index}</div>
-                            <div style={{height : "150px"}} dangerouslySetInnerHTML={{__html: tableElements[virtualRow.index]?.outerHTML}}></div>
-                            {/*<div style={{display : "flex", flexDirection : "column"}}>*/}
-                            {/*    <div style={{background: "red"}} dangerouslySetInnerHTML={{__html: cardItemsArray[index]?.cardImage}}></div>*/}
-                            {/*    <div dangerouslySetInnerHTML={{__html: cardItemsArray[index]?.cardText}}></div>*/}
-                            {/*    <div dangerouslySetInnerHTML={{__html: cardItemsArray[index]?.cardSetInfo}}></div>*/}
-                            {/*</div>*/}
+                            {
+                                cardResults[virtualRow.index]
+                                    ? <div dangerouslySetInnerHTML={{__html: cardResults[virtualRow.index]?.outerHTML}}></div>
+                                    : <div style={{height : DEFAULT_ROW_HEIGHT}}>Loading...</div> }
                         </div>
                     ))}
                 </div>
@@ -129,12 +104,8 @@ function RowVirtualizerDynamic({rows}) {
         </>);
 };
 
-let queryClient = new QueryClient();
-
 ReactDOM.render((
-    <QueryClientProvider client={queryClient}>
-        <RowVirtualizerDynamic rows={null}/>
-    </QueryClientProvider>
+    <RowVirtualizerDynamic rows={null}/>
 ), element)
 
 //@ts-ignore
