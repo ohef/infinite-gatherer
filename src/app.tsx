@@ -13,7 +13,8 @@ element.outerHTML = "<div class='cardItemTable'></div>";
 element = document.querySelector(".cardItemTable");
 
 //Get total results
-const numberOfResults = Number.parseInt(/\d+/.exec(document.querySelector("#ctl00_ctl00_ctl00_MainContent_SubContent_SubContentHeader_searchTermDisplay").innerHTML)[0]);
+const numberOfResults = Number.parseInt(/(?<=\()\d+/.exec(document.querySelector("#ctl00_ctl00_ctl00_MainContent_SubContent_SubContentHeader_searchTermDisplay").innerHTML)[0]);
+console.log(numberOfResults)
 
 const LoadingRow = (props) => (
     <table {...props}>
