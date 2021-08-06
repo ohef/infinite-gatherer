@@ -15,11 +15,71 @@ element = document.querySelector(".cardItemTable");
 //Get total results
 const numberOfResults = Number.parseInt(/\d+/.exec(document.querySelector("#ctl00_ctl00_ctl00_MainContent_SubContent_SubContentHeader_searchTermDisplay").innerHTML)[0]);
 
-function RowVirtualizerDynamic({rows}) {
-    const parentRef = React.useRef();
+const LoadingRow = (props) => (
+    <table {...props}>
+        <tbody>
+        <tr className="cardItem oddItem">
+            <td width={95} className="leftCol">
+                <div className="clear"/>
+                {/*<a href="../Card/Details.aspx?multiverseid=145992"*/}
+                {/*   id="ctl00_ctl00_ctl00_MainContent_SubContent_SubContent_ctl00_listRepeater_ctl19_cardImageLink"*/}
+                {/*   onClick="return CardLinkAction(event, this, 'SameWindow');">*/}
+                {/*    /!*<img src="../../Handlers/Image.ashx?multiverseid=145992&type=card"*!/*/}
+                {/*    /!*     id="ctl00_ctl00_ctl00_MainContent_SubContent_SubContent_ctl00_listRepeater_ctl19_cardImage"*!/*/}
+                {/*    /!*     width={95} height={132}*!/*/}
+                {/*    /!*     style={{borderRadius: '6px', WebkitBorderRadius: '6px', MozBorderRadius: '6px'}}*!/*/}
+                {/*    /!*     alt="Adder-Staff Boggart" border={0}/>*!/*/}
+                {/*    <div width={95} height={132}>Loading...</div>*/}
+                {/*</a>*/}
+                <div className="clear"/>
+            </td>
+            <td className="middleCol">
+                <div className="clear"/>
+                <div className="cardInfo">
+                {/*<span className="cardTitle">*/}
+                {/*  <a id="ctl00_ctl00_ctl00_MainContent_SubContent_SubContent_ctl00_listRepeater_ctl19_cardTitle"*/}
+                {/*     onClick="return CardLinkAction(event, this, 'SameWindow');"*/}
+                {/*     href="../Card/Details.aspx?multiverseid=145992">Adder-Staff Boggart</a></span> <span*/}
+                {/*    className="manaCost">*/}
+                {/*  <img src="/Handlers/Image.ashx?size=small&name=1&type=symbol" alt={1} align="absbottom"/><img*/}
+                {/*    src="/Handlers/Image.ashx?size=small&name=R&type=symbol" alt="Red" align="absbottom"/></span> (<span*/}
+                {/*    className="convertedManaCost">2</span>)*/}
+                {/*    <br/>*/}
+                {/*    <span className="typeLine">*/}
+                {/*  Creature  — Goblin Warrior*/}
+                {/*  (2/1)</span>*/}
+                {/*    <div className="rulesText">*/}
+                {/*        <p>When Adder-Staff Boggart enters the battlefield, clash with an opponent. If you win, put a*/}
+                {/*            +1/+1 counter on Adder-Staff Boggart. <i>(Each clashing player reveals the top card of their*/}
+                {/*                library, then puts that card on the top or bottom. A player wins if their card had a*/}
+                {/*                higher mana value.)</i></p></div>*/}
+                </div>
+            </td>
+            <td className="rightCol setVersions">
+                <div className="clear"/>
+                <div>
+                    <div
+                        id="ctl00_ctl00_ctl00_MainContent_SubContent_SubContent_ctl00_listRepeater_ctl19_cardSetCurrent"
+                        className="rightCol">
+                        {/*<a onClick="return CardLinkAction(event, this, 'SameWindow');"*/}
+                        {/*   href="../Card/Details.aspx?multiverseid=145992"><img title="Lorwyn (Common)"*/}
+                        {/*                                                        src="../../Handlers/Image.ashx?type=symbol&set=LRW&size=small&rarity=C"*/}
+                        {/*                                                        alt="Lorwyn (Common)" style={{*/}
+                        {/*    borderWidth: '0px',*/}
+                        {/*    maxWidth: '21px'*/}
+                        {/*}}/></a>*/}
+                    </div>
+                </div>
+            </td>
+        </tr>
+        </tbody>
+    </table> )
+
+function MagicInfinite() {
     const DEFAULT_ROW_HEIGHT = 150;
     const DEFAULT_PAGE_RESULTS_SIZE = 100;
 
+    const parentRef = React.useRef();
     const rowVirtualizer = useVirtual({
         size: numberOfResults,
         estimateSize: useCallback(() => DEFAULT_ROW_HEIGHT, []),
@@ -95,8 +155,9 @@ function RowVirtualizerDynamic({rows}) {
                             }}>
                             {
                                 cardResults[virtualRow.index]
-                                    ? <div dangerouslySetInnerHTML={{__html: cardResults[virtualRow.index]?.outerHTML}}></div>
-                                    : <div style={{height : DEFAULT_ROW_HEIGHT}}>Loading...</div> }
+                                    ? <div dangerouslySetInnerHTML={{__html: cardResults[virtualRow.index]?.outerHTML}}/>
+                                    : <LoadingRow style={{height: DEFAULT_ROW_HEIGHT}}/>
+                            }
                         </div>
                     ))}
                 </div>
@@ -104,9 +165,7 @@ function RowVirtualizerDynamic({rows}) {
         </>);
 };
 
-ReactDOM.render((
-    <RowVirtualizerDynamic rows={null}/>
-), element)
+ReactDOM.render((<MagicInfinite/>), element)
 
 //@ts-ignore
 if (module.hot) {

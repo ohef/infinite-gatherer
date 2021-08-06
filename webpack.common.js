@@ -25,7 +25,7 @@ module.exports = {
                         ]
                     }
                 },
-                {test: /.glsl$/, loader: "raw-loader"},
+                {test: [/\.glsl$/, /\.html$/], type: 'asset/inline'},
                 {test: /.woff$/, loader: "url-loader"},
                 {
                     test: /.css$/,
@@ -41,6 +41,6 @@ module.exports = {
         }]
     },
     resolve: {
-        extensions: ['.json', '.js', '.jsx', '.ts', '.tsx']
+        extensions: ['.json', '.js', '.jsx', '.ts', '.tsx', '.html']
     },
 }
