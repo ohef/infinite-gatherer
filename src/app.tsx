@@ -1,5 +1,5 @@
 import * as React from 'react'
-import {useCallback, useEffect, useState} from 'react'
+import {useCallback, useEffect, useRef, useState} from 'react'
 import * as ReactDOM from 'react-dom'
 import {useVirtual} from "react-virtual";
 import {useDebounce} from "use-debounce"
@@ -21,38 +21,12 @@ const LoadingRow = (props) => (
         <tr className="cardItem oddItem">
             <td width={95} className="leftCol">
                 <div className="clear"/>
-                {/*<a href="../Card/Details.aspx?multiverseid=145992"*/}
-                {/*   id="ctl00_ctl00_ctl00_MainContent_SubContent_SubContent_ctl00_listRepeater_ctl19_cardImageLink"*/}
-                {/*   onClick="return CardLinkAction(event, this, 'SameWindow');">*/}
-                {/*    /!*<img src="../../Handlers/Image.ashx?multiverseid=145992&type=card"*!/*/}
-                {/*    /!*     id="ctl00_ctl00_ctl00_MainContent_SubContent_SubContent_ctl00_listRepeater_ctl19_cardImage"*!/*/}
-                {/*    /!*     width={95} height={132}*!/*/}
-                {/*    /!*     style={{borderRadius: '6px', WebkitBorderRadius: '6px', MozBorderRadius: '6px'}}*!/*/}
-                {/*    /!*     alt="Adder-Staff Boggart" border={0}/>*!/*/}
-                {/*    <div width={95} height={132}>Loading...</div>*/}
-                {/*</a>*/}
                 <div className="clear"/>
             </td>
             <td className="middleCol">
                 <div className="clear"/>
                 <div className="cardInfo">
-                {/*<span className="cardTitle">*/}
-                {/*  <a id="ctl00_ctl00_ctl00_MainContent_SubContent_SubContent_ctl00_listRepeater_ctl19_cardTitle"*/}
-                {/*     onClick="return CardLinkAction(event, this, 'SameWindow');"*/}
-                {/*     href="../Card/Details.aspx?multiverseid=145992">Adder-Staff Boggart</a></span> <span*/}
-                {/*    className="manaCost">*/}
-                {/*  <img src="/Handlers/Image.ashx?size=small&name=1&type=symbol" alt={1} align="absbottom"/><img*/}
-                {/*    src="/Handlers/Image.ashx?size=small&name=R&type=symbol" alt="Red" align="absbottom"/></span> (<span*/}
-                {/*    className="convertedManaCost">2</span>)*/}
-                {/*    <br/>*/}
-                {/*    <span className="typeLine">*/}
-                {/*  Creature  — Goblin Warrior*/}
-                {/*  (2/1)</span>*/}
-                {/*    <div className="rulesText">*/}
-                {/*        <p>When Adder-Staff Boggart enters the battlefield, clash with an opponent. If you win, put a*/}
-                {/*            +1/+1 counter on Adder-Staff Boggart. <i>(Each clashing player reveals the top card of their*/}
-                {/*                library, then puts that card on the top or bottom. A player wins if their card had a*/}
-                {/*                higher mana value.)</i></p></div>*/}
+                    <span>Loading...</span>
                 </div>
             </td>
             <td className="rightCol setVersions">
@@ -61,33 +35,26 @@ const LoadingRow = (props) => (
                     <div
                         id="ctl00_ctl00_ctl00_MainContent_SubContent_SubContent_ctl00_listRepeater_ctl19_cardSetCurrent"
                         className="rightCol">
-                        {/*<a onClick="return CardLinkAction(event, this, 'SameWindow');"*/}
-                        {/*   href="../Card/Details.aspx?multiverseid=145992"><img title="Lorwyn (Common)"*/}
-                        {/*                                                        src="../../Handlers/Image.ashx?type=symbol&set=LRW&size=small&rarity=C"*/}
-                        {/*                                                        alt="Lorwyn (Common)" style={{*/}
-                        {/*    borderWidth: '0px',*/}
-                        {/*    maxWidth: '21px'*/}
-                        {/*}}/></a>*/}
                     </div>
                 </div>
             </td>
         </tr>
         </tbody>
-    </table> )
+    </table>)
 
 function MagicInfinite() {
     const DEFAULT_ROW_HEIGHT = 150;
     const DEFAULT_PAGE_RESULTS_SIZE = 100;
 
-    const parentRef = React.useRef();
-    const rowVirtualizer = useVirtual({
+    const resultsViewRef = React.useRef();
+    const resultsVirtualizer = useVirtual({
         size: numberOfResults,
         estimateSize: useCallback(() => DEFAULT_ROW_HEIGHT, []),
-        parentRef
+        parentRef: resultsViewRef
     });
 
-    const [[topIndex, bottomIndex]] = useDebounce([rowVirtualizer?.virtualItems[0]?.index, rowVirtualizer?.virtualItems[rowVirtualizer.virtualItems.length - 1]?.index], 500);
-    const [cardResults, setCardResults] = useState<Array<Element>>(new Array(numberOfResults));
+    const [[topIndex, bottomIndex]] = useDebounce([resultsVirtualizer?.virtualItems[0]?.index, resultsVirtualizer?.virtualItems[resultsVirtualizer.virtualItems.length - 1]?.index], 500);
+    const [cardResultsCache, setCardResultsCache] = useState<Array<Element>>(new Array(numberOfResults));
     const [loadedPages, setLoadedPages] = useState<Set<Number>>(new Set());
 
     useEffect(() => {
@@ -112,7 +79,7 @@ function MagicInfinite() {
 
             const updatedArray = new Array(numberOfResults);
 
-            //Merge past results with the results we retrieved
+            //Merge past results with the results we retrieved, TODO: there could be a library for this
             for(let index = 0; index < cardResults.length; index++ ){
                 const pageIndexOffset = pageIndex * DEFAULT_PAGE_RESULTS_SIZE;
                 if(index >= pageIndexOffset  && index < pageIndexOffset + DEFAULT_PAGE_RESULTS_SIZE ) {
@@ -127,42 +94,63 @@ function MagicInfinite() {
         };
 
         const loadData = async () => {
-            const [topResults, topPages] = await loadPageDataFromRealIndex(topIndex, cardResults, loadedPages);
+            const [topResults, topPages] = await loadPageDataFromRealIndex(topIndex, cardResultsCache, loadedPages);
+            //Merge results from top index fetch into stop index fetch
             const [finalResults, finalPages] = await loadPageDataFromRealIndex(bottomIndex, topResults, topPages);
 
-            setCardResults(finalResults)
+            setCardResultsCache(finalResults)
             setLoadedPages(finalPages)
         }
 
         loadData();
     }, [topIndex, bottomIndex])
 
+    const [stickiedCardsCache, setStickiedCards] = useState<Array<Element>>([]);
+    let stickiedViewRef = useRef();
+    const stickiedVirtualizer = useVirtual({
+        size: stickiedCardsCache.length,
+        estimateSize: useCallback(() => DEFAULT_ROW_HEIGHT, []),
+        parentRef: stickiedViewRef
+    });
+
     return (
         <>
-            <div ref={parentRef}
-                style={{
-                    height: `600px`,
-                    overflow: "auto"
-                }}>
-                <div style={{
-                    height: `${rowVirtualizer.totalSize}px`,
-                    width: "100%",
-                    position: "relative"
-                }}>
-                    {rowVirtualizer.virtualItems.map(virtualRow => (
-                        <div
-                            key={virtualRow.index}
-                            ref={virtualRow.measureRef}
-                            style={{
+            <div ref={stickiedViewRef} style={{ height: `800px`, overflow: "auto" }}>
+                <div style={{ height: `${stickiedVirtualizer.totalSize}px`, width: "100%", position: "relative" }}>
+                    {stickiedVirtualizer.virtualItems.map(virtualRow => (
+                        <div key={virtualRow.index} ref={virtualRow.measureRef}
+                             style={{
+                                 position: "absolute",
+                                 top: 0,
+                                 left: 0,
+                                 width: "100%",
+                                 transform: `translateY(${virtualRow.start}px)` }}>
+                            {
+                                stickiedCardsCache[virtualRow.index]
+                                    ? <div
+                                        onClick={() => setStickiedCards(stickiedCardsCache.filter((x, i) => i != virtualRow.index))}
+                                        dangerouslySetInnerHTML={{__html: stickiedCardsCache[virtualRow.index]?.outerHTML}}/>
+                                    : <LoadingRow style={{height: DEFAULT_ROW_HEIGHT}}/>
+                            }
+                        </div>
+                    ))}
+                </div>
+            </div>
+            <div ref={resultsViewRef} style={{ height: `800px`, overflow: "auto" }}>
+                <div style={{ height: `${resultsVirtualizer.totalSize}px`, width: "100%", position: "relative" }}>
+                    {resultsVirtualizer.virtualItems.map(virtualRow => (
+                        <div key={virtualRow.index} ref={virtualRow.measureRef}
+                             style={{
                                 position: "absolute",
                                 top: 0,
                                 left: 0,
                                 width: "100%",
-                                transform: `translateY(${virtualRow.start}px)`
-                            }}>
+                                transform: `translateY(${virtualRow.start}px)` }}>
                             {
-                                cardResults[virtualRow.index]
-                                    ? <div dangerouslySetInnerHTML={{__html: cardResults[virtualRow.index]?.outerHTML}}/>
+                                cardResultsCache[virtualRow.index]
+                                    ? <div
+                                        onClick={() => setStickiedCards([...stickiedCardsCache, cardResultsCache[virtualRow.index]])}
+                                        dangerouslySetInnerHTML={{__html: cardResultsCache[virtualRow.index]?.outerHTML}}/>
                                     : <LoadingRow style={{height: DEFAULT_ROW_HEIGHT}}/>
                             }
                         </div>
