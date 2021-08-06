@@ -86,17 +86,17 @@ function MagicInfinite() {
         parentRef
     });
 
-    const [topIndex] = useDebounce(rowVirtualizer?.virtualItems[0]?.index, 500);
+    const [[topIndex, bottomIndex]] = useDebounce([rowVirtualizer?.virtualItems[0]?.index, rowVirtualizer?.virtualItems[rowVirtualizer.virtualItems.length - 1]?.index], 500);
     const [cardResults, setCardResults] = useState<Array<Element>>(new Array(numberOfResults));
     const [loadedPages, setLoadedPages] = useState<Set<Number>>(new Set());
 
     useEffect(() => {
-        const pageIndex = (topIndex - topIndex % DEFAULT_PAGE_RESULTS_SIZE) / DEFAULT_PAGE_RESULTS_SIZE;
+        const loadPageDataFromRealIndex = async (realIndex, cardResults, loadedPages) => {
+            const pageIndex = (realIndex - realIndex % DEFAULT_PAGE_RESULTS_SIZE) / DEFAULT_PAGE_RESULTS_SIZE;
 
-        if (loadedPages.has(pageIndex))
-            return;
+            if (loadedPages.has(pageIndex))
+                return [cardResults, loadedPages];
 
-        const getRows = async () => {
             const {origin, pathname, search} = window.location
 
             const urlSearchParams = new URLSearchParams(search);
@@ -123,12 +123,19 @@ function MagicInfinite() {
                 }
             }
 
-            setCardResults(updatedArray)
-            setLoadedPages(new Set([pageIndex, ...loadedPages]))
+            return [updatedArray, new Set([pageIndex, ...loadedPages])]
         };
 
-        getRows();
-    }, [topIndex])
+        const loadData = async () => {
+            const [topResults, topPages] = await loadPageDataFromRealIndex(topIndex, cardResults, loadedPages);
+            const [finalResults, finalPages] = await loadPageDataFromRealIndex(bottomIndex, topResults, topPages);
+
+            setCardResults(finalResults)
+            setLoadedPages(finalPages)
+        }
+
+        loadData();
+    }, [topIndex, bottomIndex])
 
     return (
         <>
