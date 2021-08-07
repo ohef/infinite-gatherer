@@ -56,6 +56,7 @@ function useCachedGathererResultsState(windowStartIndex : number, bottomWindowIn
     const cardDataAndStateSetter: MagicCardElementsAndState = useState<Array<Element>>(new Array(numberOfResults));
     const [cardResultsCache, setCardResultsCache] = cardDataAndStateSetter;
     const [loadedPages, setLoadedPages] = useState<Set<Number>>(new Set());
+    console.log(loadedPages);
 
     useEffect(() => {
         const loadPageDataFromRealIndex = async (realIndex, cardResults, loadedPages) => {
@@ -89,7 +90,10 @@ function useCachedGathererResultsState(windowStartIndex : number, bottomWindowIn
                 }
             }
 
-            return [updatedArray, new Set([pageIndex, ...loadedPages])]
+            const updatedLoadedPages = new Set(loadedPages);
+            updatedLoadedPages.add(pageIndex);
+
+            return [updatedArray, updatedLoadedPages]
         };
 
         const loadData = async () => {
@@ -132,48 +136,52 @@ function MagicInfinite() {
 
     return (
         <>
-            <div ref={resultsViewRef} style={{ height: `800px`, overflow: "auto" }}>
-                <div style={{ height: `${resultsVirtualizer.totalSize}px`, width: "100%", position: "relative" }}>
-                    {resultsVirtualizer.virtualItems.map(virtualRow => (
-                        <div key={virtualRow.index} ref={virtualRow.measureRef}
-                             style={{
-                                 position: "absolute",
-                                 top: 0,
-                                 left: 0,
-                                 width: "100%",
-                                 transform: `translateY(${virtualRow.start}px)` }}>
-                            {
-                                cardResultsCache[virtualRow.index]
-                                    ? <div
-                                        onClick={() => setStickiedCards([...stickiedCardsCache, cardResultsCache[virtualRow.index]])}
-                                        dangerouslySetInnerHTML={{__html: cardResultsCache[virtualRow.index]?.outerHTML}}/>
-                                    : <LoadingRow style={{height: DEFAULT_ROW_HEIGHT}}/>
-                            }
-                        </div>
-                    ))}
+            {/*<div style={{display: "flex", flexDirection: "row"}}>*/}
+                <div ref={resultsViewRef} style={{height: `800px`, overflow: "auto"}}>
+                    <div style={{height: `${resultsVirtualizer.totalSize}px`, width: "100%", position: "relative"}}>
+                        {resultsVirtualizer.virtualItems.map(virtualRow => (
+                            <div key={virtualRow.index} ref={virtualRow.measureRef}
+                                 style={{
+                                     position: "absolute",
+                                     top: 0,
+                                     left: 0,
+                                     width: "100%",
+                                     transform: `translateY(${virtualRow.start}px)`
+                                 }}>
+                                {
+                                    cardResultsCache[virtualRow.index]
+                                        ? <div
+                                            onClick={() => setStickiedCards([...stickiedCardsCache, cardResultsCache[virtualRow.index]])}
+                                            dangerouslySetInnerHTML={{__html: cardResultsCache[virtualRow.index]?.outerHTML}}/>
+                                        : <LoadingRow style={{height: DEFAULT_ROW_HEIGHT}}/>
+                                }
+                            </div>
+                        ))}
+                    </div>
                 </div>
-            </div>
-            <div ref={stickiedViewRef} style={{ height: `800px`, overflow: "auto" }}>
-                <div style={{ height: `${stickiedVirtualizer.totalSize}px`, width: "100%", position: "relative" }}>
-                    {stickiedVirtualizer.virtualItems.map(virtualRow => (
-                        <div key={virtualRow.index} ref={virtualRow.measureRef}
-                             style={{
-                                 position: "absolute",
-                                 top: 0,
-                                 left: 0,
-                                 width: "100%",
-                                 transform: `translateY(${virtualRow.start}px)` }}>
-                            {
-                                stickiedCardsCache[virtualRow.index]
-                                    ? <div
-                                        onClick={() => setStickiedCards(stickiedCardsCache.filter((x, i) => i != virtualRow.index))}
-                                        dangerouslySetInnerHTML={{__html: stickiedCardsCache[virtualRow.index]?.outerHTML}}/>
-                                    : <LoadingRow style={{height: DEFAULT_ROW_HEIGHT}}/>
-                            }
-                        </div>
-                    ))}
+                <div ref={stickiedViewRef} style={{height: `800px`, overflow: "auto"}}>
+                    <div style={{height: `${stickiedVirtualizer.totalSize}px`, width: "100%", position: "relative"}}>
+                        {stickiedVirtualizer.virtualItems.map(virtualRow => (
+                            <div key={virtualRow.index} ref={virtualRow.measureRef}
+                                 style={{
+                                     position: "absolute",
+                                     top: 0,
+                                     left: 0,
+                                     width: "100%",
+                                     transform: `translateY(${virtualRow.start}px)`
+                                 }}>
+                                {
+                                    stickiedCardsCache[virtualRow.index]
+                                        ? <div
+                                            onClick={() => setStickiedCards(stickiedCardsCache.filter((x, i) => i != virtualRow.index))}
+                                            dangerouslySetInnerHTML={{__html: stickiedCardsCache[virtualRow.index]?.outerHTML}}/>
+                                        : <LoadingRow style={{height: DEFAULT_ROW_HEIGHT}}/>
+                                }
+                            </div>
+                        ))}
+                    </div>
                 </div>
-            </div>
+            {/*</div>*/}
         </>);
 };
 
