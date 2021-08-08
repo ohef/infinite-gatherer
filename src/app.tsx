@@ -1,13 +1,30 @@
 import * as React from 'react'
-import {useCallback, useEffect, useRef, useState} from 'react'
+import {MouseEventHandler, useCallback, useEffect, useRef, useState} from 'react'
 import * as ReactDOM from 'react-dom'
-import {useVirtual} from "react-virtual";
+import {useVirtual, VirtualItem} from "react-virtual";
 import {useDebounce} from "use-debounce"
+import jss from "jss";
+import preset from "jss-preset-default";
 
-const LoadingRow = (props) => (
-    <table {...props}>
+const LEFT_CLASS = "leftCol";
+const MIDDLE_CLASS = "middleCol"
+const RIGHT_CLASS = "rightCol"
+
+const DEFAULT_ROW_HEIGHT = 150;
+
+// One time setup with default plugins and settings.
+jss.setup(preset())
+
+const styles = {
+    selectedRow: {background: "#232237"}
+}
+
+const {classes} = jss.createStyleSheet(styles).attach()
+
+const LoadingRow = () => (
+    <table>
         <tbody>
-        <tr className="cardItem oddItem">
+        <tr className="cardItem" style={{height: DEFAULT_ROW_HEIGHT}}>
             <td width={95} className="leftCol">
                 <div className="clear"/>
                 <div className="clear"/>
@@ -29,9 +46,39 @@ const LoadingRow = (props) => (
             </td>
         </tr>
         </tbody>
-    </table>)
+    </table>
+)
 
-function setupMagicGathererSearchResultsPage() {
+type GathererRowProps = {
+    leftContent: Element,
+    middleContent: Element,
+    rightContent: Element,
+    rowClassNames: string,
+    onRowClickHandler : MouseEventHandler,
+}
+
+const GathererRow : React.FC<GathererRowProps> = (props) => {
+    const {
+        leftContent,
+        middleContent,
+        rightContent,
+        rowClassNames,
+        onRowClickHandler
+    }: GathererRowProps = props;
+
+    return (
+        <table onClick={onRowClickHandler}>
+            <tbody>
+                <tr className={rowClassNames}>
+                    <td width={95} className="leftCol" dangerouslySetInnerHTML={{__html: leftContent.innerHTML}}/>
+                    <td className="middleCol" dangerouslySetInnerHTML={{__html: middleContent.innerHTML}}/>
+                    <td className="rightCol setVersions" dangerouslySetInnerHTML={{__html: rightContent.innerHTML}}/>
+                </tr>
+            </tbody>
+        </table>);
+}
+
+const setupMagicGathererSearchResultsPage = () => {
     //Get total results
     const numberOfResults = Number.parseInt(/(?<=\()\d+/.exec(document.querySelector("#ctl00_ctl00_ctl00_MainContent_SubContent_SubContentHeader_searchTermDisplay").innerHTML)[0]);
 
@@ -43,11 +90,13 @@ function setupMagicGathererSearchResultsPage() {
     mountingElement.outerHTML = "<div class='cardItemTable'></div>";
     mountingElement = document.querySelector(".cardItemTable");
     return {numberOfResults, mountingElement};
-}
+};
 
 let {numberOfResults, mountingElement} = setupMagicGathererSearchResultsPage();
 
-type MagicCardElementsAndState = [Array<Element>, ((value: (((prevState: Array<Element>) => Array<Element>) | Array<Element>)) => void)];
+type CardData = Element
+type MagicCardElementsAndState = [Array<CardData>, ((value: (((prevState: Array<CardData>) => Array<CardData>) | Array<CardData>)) => void)];
+
 function useCachedGathererResultsState(windowStartIndex : number, bottomWindowIndex : number) : MagicCardElementsAndState {
     const DEFAULT_PAGE_RESULTS_SIZE = 100;
     const CARD_ROW_SELECTOR = ".cardItemTable table";
@@ -56,7 +105,6 @@ function useCachedGathererResultsState(windowStartIndex : number, bottomWindowIn
     const cardDataAndStateSetter: MagicCardElementsAndState = useState<Array<Element>>(new Array(numberOfResults));
     const [cardResultsCache, setCardResultsCache] = cardDataAndStateSetter;
     const [loadedPages, setLoadedPages] = useState<Set<Number>>(new Set());
-    console.log(loadedPages);
 
     useEffect(() => {
         const loadPageDataFromRealIndex = async (realIndex, cardResults, loadedPages) => {
@@ -112,7 +160,6 @@ function useCachedGathererResultsState(windowStartIndex : number, bottomWindowIn
 }
 
 function MagicInfinite() {
-    const DEFAULT_ROW_HEIGHT = 150;
 
     const resultsViewRef = React.useRef();
     const resultsVirtualizer = useVirtual({
@@ -124,15 +171,34 @@ function MagicInfinite() {
 
     const windowStartIndex = resultsVirtualizer?.virtualItems[0]?.index;
     const windowEndIndex = resultsVirtualizer?.virtualItems[resultsVirtualizer.virtualItems.length - 1]?.index;
-    const [cardResultsCache, _] = useCachedGathererResultsState(windowStartIndex, windowEndIndex);
+    const [cardResultsCache, _]: MagicCardElementsAndState = useCachedGathererResultsState(windowStartIndex, windowEndIndex);
 
-    const [stickiedCardsCache, setStickiedCards] = useState<Array<Element>>([]);
+    const [stickiedCardsMap, setStickiedCardsMap] = useState<Map<number, CardData>>(new Map());
+    const [stickiedCards, setStickiedCards] = useState<Array<CardData>>([]);
+
     let stickiedViewRef = useRef();
     const stickiedVirtualizer = useVirtual({
-        size: stickiedCardsCache.length,
+        size: stickiedCards.length,
         estimateSize: useCallback(() => DEFAULT_ROW_HEIGHT, []),
         parentRef: stickiedViewRef
     });
+
+    const removeRowFactory = (virtualRow : VirtualItem) => () => {
+        //All this work is to update the map that keeps track of which stickied item corresponds to the item in the results list
+        //TODO: Yeah it's bad, probably should have had it such that stickied items had metadata if where they link to instead of
+        //inferring from the map
+        //TODO: holy crap maps, iterators and typescript just doesn't like working together maybe fix later?
+        const updatedMapEntries : Array<[number, Element]> = []
+        for( const entry of stickiedCardsMap.entries() )
+        {
+            if(entry[1] === stickiedCards[virtualRow.index])
+                continue;
+
+            updatedMapEntries.push(entry)
+        }
+        setStickiedCardsMap(new Map(updatedMapEntries));
+        setStickiedCards(stickiedCards.filter((x, i) => i != virtualRow.index))
+    };
 
     return (
         <>
@@ -150,10 +216,27 @@ function MagicInfinite() {
                                  }}>
                                 {
                                     cardResultsCache[virtualRow.index]
-                                        ? <div
-                                            onClick={() => setStickiedCards([...stickiedCardsCache, cardResultsCache[virtualRow.index]])}
-                                            dangerouslySetInnerHTML={{__html: cardResultsCache[virtualRow.index]?.outerHTML}}/>
-                                        : <LoadingRow style={{height: DEFAULT_ROW_HEIGHT}}/>
+                                        ? <GathererRow
+                                            rowClassNames={(`${cardResultsCache[virtualRow.index].querySelector(".cardItem").className} ${stickiedCardsMap.get(virtualRow.index) ? classes.selectedRow : null}`)}
+                                            leftContent={cardResultsCache[virtualRow.index].querySelector(`.${LEFT_CLASS}`)}
+                                            middleContent={cardResultsCache[virtualRow.index].querySelector(`.${MIDDLE_CLASS}`)}
+                                            rightContent={cardResultsCache[virtualRow.index].querySelector(`.${RIGHT_CLASS}`)}
+                                            onRowClickHandler={() => {
+                                                const foundStickiedCard = stickiedCardsMap.get(virtualRow.index);
+                                                if(foundStickiedCard) {
+                                                    const updatedMap = new Map(stickiedCardsMap.entries());
+                                                    updatedMap.delete(virtualRow.index)
+                                                    setStickiedCardsMap(updatedMap);
+                                                    setStickiedCards(stickiedCards.filter((x) => x !== foundStickiedCard))
+                                                }
+                                                else{
+                                                    const map = new Map(stickiedCardsMap.entries());
+                                                    map.set(virtualRow.index,cardResultsCache[virtualRow.index] )
+                                                    setStickiedCardsMap(map);
+                                                    setStickiedCards([...stickiedCards, cardResultsCache[virtualRow.index]])
+                                                }
+                                            }}/>
+                                        : <LoadingRow/>
                                 }
                             </div>
                         ))}
@@ -171,11 +254,11 @@ function MagicInfinite() {
                                      transform: `translateY(${virtualRow.start}px)`
                                  }}>
                                 {
-                                    stickiedCardsCache[virtualRow.index]
+                                    stickiedCards[virtualRow.index]
                                         ? <div
-                                            onClick={() => setStickiedCards(stickiedCardsCache.filter((x, i) => i != virtualRow.index))}
-                                            dangerouslySetInnerHTML={{__html: stickiedCardsCache[virtualRow.index]?.outerHTML}}/>
-                                        : <LoadingRow style={{height: DEFAULT_ROW_HEIGHT}}/>
+                                            onClick={removeRowFactory(virtualRow)}
+                                            dangerouslySetInnerHTML={{__html: stickiedCards[virtualRow.index]?.outerHTML}}/>
+                                        : <LoadingRow />
                                 }
                             </div>
                         ))}

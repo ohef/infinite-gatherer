@@ -19,6 +19,8 @@
     "dat.gui": "^0.7.6",
     "file-loader": "^5.0.2",
     "html-webpack-plugin": "^3.2.0",
+    "jss": "^10.7.1",
+    "jss-preset-default": "^10.7.1",
     "loader-utils": "^2.0.0",
     "lodash": "^4.17.15",
     "raw-loader": "^4.0.0",
@@ -32,6 +34,7 @@
     "styled-components": "^4.4.1",
     "three.js": "^0.77.1",
     "ts-loader": "^9.2.5",
+    "tslib": "^2.3.0",
     "typescript": "^4.3.5",
     "url-loader": "^3.0.0",
     "use-debounce": "^7.0.0"
