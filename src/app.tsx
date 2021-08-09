@@ -1,5 +1,5 @@
 import * as React from 'react'
-import {MouseEventHandler, useCallback, useEffect, useRef, useState} from 'react'
+import {Dispatch, MouseEventHandler, SetStateAction, useCallback, useEffect, useRef, useState} from 'react'
 import * as ReactDOM from 'react-dom'
 import {useVirtual, VirtualItem} from "react-virtual";
 import {useDebounce} from "use-debounce"
@@ -95,14 +95,13 @@ const setupMagicGathererSearchResultsPage = () => {
 let {numberOfResults, mountingElement} = setupMagicGathererSearchResultsPage();
 
 type CardData = Element
-type MagicCardElementsAndState = [Array<CardData>, ((value: (((prevState: Array<CardData>) => Array<CardData>) | Array<CardData>)) => void)];
 
-function useCachedGathererResultsState(windowStartIndex : number, bottomWindowIndex : number) : MagicCardElementsAndState {
+function useCachedGathererResultsState(windowStartIndex : number, bottomWindowIndex : number) : [Array<CardData>, Dispatch<SetStateAction<Array<CardData>>>] {
     const DEFAULT_PAGE_RESULTS_SIZE = 100;
     const CARD_ROW_SELECTOR = ".cardItemTable table";
 
     const [[topIndex, bottomIndex]] = useDebounce([windowStartIndex, bottomWindowIndex], 500);
-    const cardDataAndStateSetter: MagicCardElementsAndState = useState<Array<Element>>(new Array(numberOfResults));
+    const cardDataAndStateSetter: [Array<CardData>, Dispatch<SetStateAction<Array<CardData>>>] = useState<Array<Element>>(new Array(numberOfResults));
     const [cardResultsCache, setCardResultsCache] = cardDataAndStateSetter;
     const [loadedPages, setLoadedPages] = useState<Set<Number>>(new Set());
 
@@ -160,7 +159,6 @@ function useCachedGathererResultsState(windowStartIndex : number, bottomWindowIn
 }
 
 function MagicInfinite() {
-
     const resultsViewRef = React.useRef();
     const resultsVirtualizer = useVirtual({
         size: numberOfResults,
@@ -171,7 +169,7 @@ function MagicInfinite() {
 
     const windowStartIndex = resultsVirtualizer?.virtualItems[0]?.index;
     const windowEndIndex = resultsVirtualizer?.virtualItems[resultsVirtualizer.virtualItems.length - 1]?.index;
-    const [cardResultsCache, _]: MagicCardElementsAndState = useCachedGathererResultsState(windowStartIndex, windowEndIndex);
+    const [cardResultsCache, _]: [Array<CardData>, Dispatch<SetStateAction<Array<CardData>>>] = useCachedGathererResultsState(windowStartIndex, windowEndIndex);
 
     const [stickiedCardsMap, setStickiedCardsMap] = useState<Map<number, CardData>>(new Map());
     const [stickiedCards, setStickiedCards] = useState<Array<CardData>>([]);
@@ -183,15 +181,14 @@ function MagicInfinite() {
         parentRef: stickiedViewRef
     });
 
-    const removeRowFactory = (virtualRow : VirtualItem) => () => {
+    const stickiedListClickHandler = (virtualRow: VirtualItem) => () => {
         //All this work is to update the map that keeps track of which stickied item corresponds to the item in the results list
         //TODO: Yeah it's bad, probably should have had it such that stickied items had metadata if where they link to instead of
         //inferring from the map
         //TODO: holy crap maps, iterators and typescript just doesn't like working together maybe fix later?
-        const updatedMapEntries : Array<[number, Element]> = []
-        for( const entry of stickiedCardsMap.entries() )
-        {
-            if(entry[1] === stickiedCards[virtualRow.index])
+        const updatedMapEntries: Array<[number, Element]> = []
+        for (const entry of stickiedCardsMap.entries()) {
+            if (entry[1] === stickiedCards[virtualRow.index])
                 continue;
 
             updatedMapEntries.push(entry)
@@ -200,71 +197,70 @@ function MagicInfinite() {
         setStickiedCards(stickiedCards.filter((x, i) => i != virtualRow.index))
     };
 
+    const masterListClickHandler = (virtualRow: VirtualItem) => () => {
+        const foundStickiedCard = stickiedCardsMap.get(virtualRow.index);
+        if (foundStickiedCard) {
+            const updatedMap = new Map(stickiedCardsMap.entries());
+            updatedMap.delete(virtualRow.index)
+            setStickiedCardsMap(updatedMap);
+            setStickiedCards(stickiedCards.filter((x) => x !== foundStickiedCard))
+        } else {
+            const map = new Map(stickiedCardsMap.entries());
+            map.set(virtualRow.index, cardResultsCache[virtualRow.index])
+            setStickiedCardsMap(map);
+            setStickiedCards([...stickiedCards, cardResultsCache[virtualRow.index]])
+        }
+    };
+
     return (
         <>
-            {/*<div style={{display: "flex", flexDirection: "row"}}>*/}
-                <div ref={resultsViewRef} style={{height: `800px`, overflow: "auto"}}>
-                    <div style={{height: `${resultsVirtualizer.totalSize}px`, width: "100%", position: "relative"}}>
-                        {resultsVirtualizer.virtualItems.map(virtualRow => (
-                            <div key={virtualRow.index} ref={virtualRow.measureRef}
-                                 style={{
-                                     position: "absolute",
-                                     top: 0,
-                                     left: 0,
-                                     width: "100%",
-                                     transform: `translateY(${virtualRow.start}px)`
-                                 }}>
-                                {
-                                    cardResultsCache[virtualRow.index]
-                                        ? <GathererRow
-                                            rowClassNames={(`${cardResultsCache[virtualRow.index].querySelector(".cardItem").className} ${stickiedCardsMap.get(virtualRow.index) ? classes.selectedRow : null}`)}
-                                            leftContent={cardResultsCache[virtualRow.index].querySelector(`.${LEFT_CLASS}`)}
-                                            middleContent={cardResultsCache[virtualRow.index].querySelector(`.${MIDDLE_CLASS}`)}
-                                            rightContent={cardResultsCache[virtualRow.index].querySelector(`.${RIGHT_CLASS}`)}
-                                            onRowClickHandler={() => {
-                                                const foundStickiedCard = stickiedCardsMap.get(virtualRow.index);
-                                                if(foundStickiedCard) {
-                                                    const updatedMap = new Map(stickiedCardsMap.entries());
-                                                    updatedMap.delete(virtualRow.index)
-                                                    setStickiedCardsMap(updatedMap);
-                                                    setStickiedCards(stickiedCards.filter((x) => x !== foundStickiedCard))
-                                                }
-                                                else{
-                                                    const map = new Map(stickiedCardsMap.entries());
-                                                    map.set(virtualRow.index,cardResultsCache[virtualRow.index] )
-                                                    setStickiedCardsMap(map);
-                                                    setStickiedCards([...stickiedCards, cardResultsCache[virtualRow.index]])
-                                                }
-                                            }}/>
-                                        : <LoadingRow/>
-                                }
-                            </div>
-                        ))}
-                    </div>
+            <div ref={resultsViewRef} style={{height: `75vh`, overflow: "auto"}}>
+                <div style={{height: `${resultsVirtualizer.totalSize}px`, width: "100%", position: "relative"}}>
+                    {resultsVirtualizer.virtualItems.map(virtualRow => (
+                        <div key={virtualRow.index} ref={virtualRow.measureRef}
+                             style={{
+                                 position: "absolute",
+                                 top: 0,
+                                 left: 0,
+                                 width: "100%",
+                                 transform: `translateY(${virtualRow.start}px)`
+                             }}>
+                            {
+                                cardResultsCache[virtualRow.index]
+                                    ? <GathererRow
+                                        rowClassNames={(`${cardResultsCache[virtualRow.index].querySelector(".cardItem").className} ${stickiedCardsMap.get(virtualRow.index) ? classes.selectedRow : null}`)}
+                                        leftContent={cardResultsCache[virtualRow.index].querySelector(`.${LEFT_CLASS}`)}
+                                        middleContent={cardResultsCache[virtualRow.index].querySelector(`.${MIDDLE_CLASS}`)}
+                                        rightContent={cardResultsCache[virtualRow.index].querySelector(`.${RIGHT_CLASS}`)}
+                                        onRowClickHandler={masterListClickHandler(virtualRow)}/>
+                                    : <LoadingRow/>
+                            }
+                        </div>
+                    ))}
                 </div>
-                <div ref={stickiedViewRef} style={{height: `800px`, overflow: "auto"}}>
-                    <div style={{height: `${stickiedVirtualizer.totalSize}px`, width: "100%", position: "relative"}}>
-                        {stickiedVirtualizer.virtualItems.map(virtualRow => (
-                            <div key={virtualRow.index} ref={virtualRow.measureRef}
-                                 style={{
-                                     position: "absolute",
-                                     top: 0,
-                                     left: 0,
-                                     width: "100%",
-                                     transform: `translateY(${virtualRow.start}px)`
-                                 }}>
-                                {
-                                    stickiedCards[virtualRow.index]
-                                        ? <div
-                                            onClick={removeRowFactory(virtualRow)}
-                                            dangerouslySetInnerHTML={{__html: stickiedCards[virtualRow.index]?.outerHTML}}/>
-                                        : <LoadingRow />
-                                }
-                            </div>
-                        ))}
-                    </div>
+            </div>
+            <div ref={stickiedViewRef} style={{height: `75vh`, overflow: "auto"}}>
+                <div style={{height: `${stickiedVirtualizer.totalSize}px`, width: "100%", position: "relative"}}>
+                    {stickiedVirtualizer.virtualItems.map(virtualRow => (
+                        <div key={virtualRow.index} ref={virtualRow.measureRef}
+                             style={{
+                                 position: "absolute",
+                                 top: 0,
+                                 left: 0,
+                                 width: "100%",
+                                 transform: `translateY(${virtualRow.start}px)`
+                             }}>
+                            {
+                                stickiedCards[virtualRow.index]
+                                    ? <div
+                                        onClick={stickiedListClickHandler(virtualRow)}
+                                        dangerouslySetInnerHTML={{__html: stickiedCards[virtualRow.index]?.outerHTML}}/>
+                                    : <LoadingRow/>
+                            }
+                        </div>
+                    ))}
                 </div>
-            {/*</div>*/}
+            </div>
         </>);
 };
 
