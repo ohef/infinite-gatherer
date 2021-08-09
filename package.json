@@ -1,7 +1,7 @@
 {
-  "name": "omar-personal-website",
+  "name": "infinite-gatherer",
   "version": "1.0.0",
-  "description": "omar hefnawi's personal website",
+  "description": "A plugin to make the gathering easier",
   "main": "index.js",
   "scripts": {
     "web": "webpack",
@@ -14,6 +14,7 @@
   "license": "ISC",
   "dependencies": {
     "@babel/preset-react": "^7.7.4",
+    "@material-ui/core": "^4.12.3",
     "@types/react": "^17.0.16",
     "css-loader": "^3.4.2",
     "dat.gui": "^0.7.6",
