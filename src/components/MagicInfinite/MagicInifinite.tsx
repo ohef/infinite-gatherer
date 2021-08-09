@@ -2,11 +2,11 @@ import * as React from "react";
 import {useVirtual, VirtualItem} from "react-virtual";
 import {NUMBER_OF_SEARCH_RESULTS} from "../../util/pageSetup";
 import {Dispatch, SetStateAction, useCallback, useRef, useState} from "react";
-import {DEFAULT_ROW_HEIGHT} from "../../util/constants";
-import {CardData} from "../../types";
+import {DEFAULT_ROW_HEIGHT} from "./constants";
+import {CardData} from "../../types/CardData";
 import useCachedGathererResultsState from "../../hooks/useCachedGathererResultsState";
-import GathererRow from "../GathererRow";
-import LoadingRow from "../LoadingRow";
+import GathererRow from "./GathererRow/GathererRow";
+import LoadingRow from "./LoadingRow/LoadingRow";
 import jss from "jss";
 
 const styles = {
@@ -24,19 +24,19 @@ const MagicInfinite : React.FC<{}> = () => {
         overscan: 10
     });
 
-    const windowStartIndex = resultsVirtualizer?.virtualItems[0]?.index;
-    const windowEndIndex = resultsVirtualizer?.virtualItems[resultsVirtualizer.virtualItems.length - 1]?.index;
-    const [cardResultsCache, _]: [Array<CardData>, Dispatch<SetStateAction<Array<CardData>>>] = useCachedGathererResultsState(windowStartIndex, windowEndIndex, NUMBER_OF_SEARCH_RESULTS);
-
-    const [stickiedCardsMap, setStickiedCardsMap] = useState<Map<number, CardData>>(new Map());
     const [stickiedCards, setStickiedCards] = useState<Array<CardData>>([]);
-
-    let stickiedViewRef = useRef();
+    const stickiedViewRef = useRef();
     const stickiedVirtualizer = useVirtual({
         size: stickiedCards.length,
         estimateSize: useCallback(() => DEFAULT_ROW_HEIGHT, []),
         parentRef: stickiedViewRef
     });
+
+    const windowStartIndex = resultsVirtualizer?.virtualItems[0]?.index;
+    const windowEndIndex = resultsVirtualizer?.virtualItems[resultsVirtualizer.virtualItems.length - 1]?.index;
+    const [cardResultsCache, _]: [Array<CardData>, Dispatch<SetStateAction<Array<CardData>>>] = useCachedGathererResultsState(windowStartIndex, windowEndIndex, NUMBER_OF_SEARCH_RESULTS);
+
+    const [stickiedCardsMap, setStickiedCardsMap] = useState<Map<number, CardData>>(new Map());
 
     const stickyListClickHandler = (virtualRow: VirtualItem) => () => {
         //All this work is to update the map that keeps track of which stickied item corresponds to the item in the results list
@@ -85,7 +85,7 @@ const MagicInfinite : React.FC<{}> = () => {
                             {
                                 cardResultsCache[virtualRow.index]
                                     ? <GathererRow
-                                        rowClassNames={(`${cardResultsCache[virtualRow.index].querySelector(".cardItem").className} ${stickiedCardsMap.get(virtualRow.index) ? classes.selectedRow : null}`)}
+                                        rowClassNames={(`${cardResultsCache[virtualRow.index].querySelector(".cardItem").className} ${stickiedCardsMap.get(virtualRow.index) ? classes.selectedRow : ""}`)}
                                         leftContent={cardResultsCache[virtualRow.index].querySelector(`.leftCol`)}
                                         middleContent={cardResultsCache[virtualRow.index].querySelector(`.middleCol`)}
                                         rightContent={cardResultsCache[virtualRow.index].querySelector(`.rightCol`)}

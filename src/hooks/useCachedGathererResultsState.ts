@@ -1,6 +1,6 @@
 import {Dispatch, SetStateAction, useEffect, useState} from "react";
 import {useDebounce} from "use-debounce";
-import {CardData} from "../types";
+import {CardData} from "../types/CardData";
 
 //This is hardcoded to expect that you're on the magic the gathering search URL results;
 function useCachedGathererResultsState(windowStartIndex : number, windowEndIndex : number, numberOfResults: number) : [Array<CardData>, Dispatch<SetStateAction<Array<CardData>>>] {

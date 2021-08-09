@@ -1,5 +1,5 @@
 import * as React from "react";
-import {DEFAULT_ROW_HEIGHT} from "../../util/constants";
+import {DEFAULT_ROW_HEIGHT} from "../constants";
 
 const LoadingRow : React.FC = () => (
     <table>

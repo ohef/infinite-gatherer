@@ -1,5 +1,5 @@
 {
- "name": "My extension",
+ "name": "Magic Infinite Extension",
  "version": "1.0",
  "manifest_version" : 2,
  "content_scripts": [
