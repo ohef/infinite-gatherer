@@ -8,7 +8,8 @@ import useCachedGathererResultsState from "../../hooks/useCachedGathererResultsS
 import GathererRow from "./GathererRow/GathererRow";
 import LoadingRow from "./LoadingRow/LoadingRow";
 import jss from "jss";
-import {FormControlLabel, Switch, Typography} from "@material-ui/core";
+import {Box, Button, FormControlLabel, Paper, Switch, Typography} from "@material-ui/core";
+import downloadAsFile from "download-as-file"
 
 const styles = {
     selectedRow: {background: "#232237"}
@@ -86,8 +87,20 @@ const MagicInfinite : React.FC<{}> = () => {
 
     return (
         <>
-            <FormControlLabel control={<Switch onChange={x => setIsViewingMainList(!isViewingMainList)}/>}
-                              label="Show stickied list"/>
+            <Box pb={2}>
+                <Paper variant={"outlined"} elevation={0}>
+                    <Box pl={2}>
+                        <FormControlLabel control={<Switch onChange={x => setIsViewingMainList(!isViewingMainList)}/>}
+                                          label="Show selected list"/>
+                        {isViewingMainList ? null :
+                            <Button variant={"outlined"} onClick={() => downloadAsFile({
+                                data: stickiedCards.map(ele => ele.querySelector("span.cardTitle > a").innerHTML).join("\n"),
+                                filename: 'stickied.txt'
+                            })}>Download</Button>
+                        }
+                    </Box>
+                </Paper>
+            </Box>
             { isViewingMainList
                 ?
                 <div ref={resultsViewRef} style={{height: `75vh`, overflow: "auto"}}>
@@ -116,28 +129,31 @@ const MagicInfinite : React.FC<{}> = () => {
                     </div>
                 </div>
                 :
-                <div ref={stickiedViewRef} style={{height: `75vh`, overflow: "auto"}}>
-                    <div style={{height: `${stickiedVirtualizer.totalSize}px`, width: "100%", position: "relative"}}>
-                        {stickiedVirtualizer.virtualItems.map(virtualRow => (
-                            <div key={virtualRow.index} ref={virtualRow.measureRef}
-                                 style={{
-                                     position: "absolute",
-                                     top: 0,
-                                     left: 0,
-                                     width: "100%",
-                                     transform: `translateY(${virtualRow.start}px)`
-                                 }}>
-                                {
-                                    stickiedCards[virtualRow.index]
-                                        ? <div
-                                            onClick={stickyListClickHandler(virtualRow)}
-                                            dangerouslySetInnerHTML={{__html: stickiedCards[virtualRow.index]?.outerHTML}}/>
-                                        : <LoadingRow/>
-                                }
-                            </div>
-                        ))}
+                <>
+                    <div ref={stickiedViewRef} style={{height: `75vh`, overflow: "auto"}}>
+                        <div
+                            style={{height: `${stickiedVirtualizer.totalSize}px`, width: "100%", position: "relative"}}>
+                            {stickiedVirtualizer.virtualItems.map(virtualRow => (
+                                <div key={virtualRow.index} ref={virtualRow.measureRef}
+                                     style={{
+                                         position: "absolute",
+                                         top: 0,
+                                         left: 0,
+                                         width: "100%",
+                                         transform: `translateY(${virtualRow.start}px)`
+                                     }}>
+                                    {
+                                        stickiedCards[virtualRow.index]
+                                            ? <div
+                                                onClick={stickyListClickHandler(virtualRow)}
+                                                dangerouslySetInnerHTML={{__html: stickiedCards[virtualRow.index]?.outerHTML}}/>
+                                            : <LoadingRow/>
+                                    }
+                                </div>
+                            ))}
+                        </div>
                     </div>
-                </div>
+                </>
             }
         </>);
 };

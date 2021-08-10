@@ -18,6 +18,7 @@
     "@types/react": "^17.0.16",
     "css-loader": "^3.4.2",
     "dat.gui": "^0.7.6",
+    "download-as-file": "^1.1.0",
     "file-loader": "^5.0.2",
     "html-webpack-plugin": "^3.2.0",
     "jss": "^10.7.1",
