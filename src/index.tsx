@@ -6,7 +6,7 @@ import {
     setupMagicGathererSearchResultsPage
 } from "./util/pageSetup";
 
-import MagicInfinite from "./components/MagicInfinite/MagicInifinite";
+import MagicInfinite from "./components/MagicInfinite/MagicInfinite";
 
 // One time setup with default plugins and settings.
 jss.setup(preset())
