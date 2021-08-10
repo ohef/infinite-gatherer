@@ -104,32 +104,11 @@ const MagicInfinite : React.FC<{}> = () => {
         parentRef: stickiedViewRef
     });
 
+
     return (
         <ThemeProvider theme={theme}>
             <>
-                <Box pb={2}>
-                    <Paper variant={"outlined"} elevation={0}>
-                        <Box margin={1}>
-                            <Grid container>
-                                <Grid item >
-                                    <Box pl={2}>
-                                        <FormControlLabel control={<Switch color={"primary"}
-                                                                           onChange={x => setIsViewingMainList(!isViewingMainList)}/>}
-                                                          label="Show selected list"/>
-                                    </Box>
-                                </Grid>
-                                <Grid item >
-                                    {isViewingMainList ? null :
-                                        <Button color={"primary"} variant={"contained"} onClick={() => downloadAsFile({
-                                            data: stickiedCards.map(ele => ele.querySelector("span.cardTitle > a").innerHTML).join("\n"),
-                                            filename: 'stickied.txt'
-                                        })}>Download List</Button>
-                                    }
-                                </Grid>
-                            </Grid>
-                        </Box>
-                    </Paper>
-                </Box>
+                <TopBarControl/>
                 {isViewingMainList
                     ?
                     <div ref={resultsViewRef} style={{height: `75vh`, overflow: "auto"}}>
@@ -185,6 +164,61 @@ const MagicInfinite : React.FC<{}> = () => {
             </>
         </ThemeProvider>
     );
+
+    function GathererResultsVirtualizedList() {
+        return(
+        <div ref={resultsViewRef} style={{height: `75vh`, overflow: "auto"}}>
+            <div style={{height: `${resultsVirtualizer.totalSize}px`, width: "100%", position: "relative"}}>
+                {resultsVirtualizer.virtualItems.map(virtualRow => (
+                    <div key={virtualRow.index} ref={virtualRow.measureRef}
+                         style={{
+                             position: "absolute",
+                             top: 0,
+                             left: 0,
+                             width: "100%",
+                             transform: `translateY(${virtualRow.start}px)`
+                         }}>
+                        {
+                            cardResultsCache[virtualRow.index]
+                                ? <GathererRow
+                                    rowClassNames={(`${cardResultsCache[virtualRow.index].querySelector(".cardItem").className} ${stickiedCardsMap.get(virtualRow.index) ? classes.selectedRow : ""}`)}
+                                    leftContent={cardResultsCache[virtualRow.index].querySelector(`.leftCol`)}
+                                    middleContent={cardResultsCache[virtualRow.index].querySelector(`.middleCol`)}
+                                    rightContent={cardResultsCache[virtualRow.index].querySelector(`.rightCol`)}
+                                    onRowClickHandler={mainListClickHandler(virtualRow)}/>
+                                : <LoadingRow/>
+                        }
+                    </div>
+                ))}
+            </div>
+        </div>)
+    }
+
+    function TopBarControl() {
+        return <Box pb={2}>
+            <Paper variant={"outlined"} elevation={0}>
+                <Box margin={1}>
+                    <Grid container>
+                        <Grid item>
+                            <Box pl={2}>
+                                <FormControlLabel control={<Switch color={"primary"}
+                                                                   onChange={x => setIsViewingMainList(!isViewingMainList)}/>}
+                                                  label="Show selected list"/>
+                            </Box>
+                        </Grid>
+                        <Grid item>
+                            {isViewingMainList ? null :
+                                <Button color={"primary"} variant={"contained"} onClick={() => downloadAsFile({
+                                    data: stickiedCards.map(ele => ele.querySelector("span.cardTitle > a").innerHTML).join("\n"),
+                                    filename: 'stickied.txt'
+                                })}>Download List</Button>
+                            }
+                        </Grid>
+                    </Grid>
+                </Box>
+            </Paper>
+        </Box>;
+    }
 };
 
 export default MagicInfinite;
