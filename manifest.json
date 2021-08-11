@@ -1,11 +1,14 @@
 {
  "name": "Magic Infinite Extension",
- "version": "1.0",
+ "version": "0.5.0",
  "manifest_version" : 2,
  "content_scripts": [
    {
-     "matches": ["https://*.gatherer.wizards.com/*"],
-     "js": ["contentScript.js"]
+     "matches": ["https://gatherer.wizards.com/Pages/Search/*"],
+     "run_at" : "document_end",
+     "js": [
+       "bundle.js"
+     ]
    }
  ]
 }

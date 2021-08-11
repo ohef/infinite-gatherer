@@ -108,10 +108,32 @@ const MagicInfinite : React.FC<{}> = () => {
     return (
         <ThemeProvider theme={theme}>
             <>
-                <TopBarControl/>
+                <Box pb={2}>
+                    <Paper variant={"outlined"} elevation={0}>
+                        <Box margin={1}>
+                            <Grid container>
+                                <Grid item>
+                                    <Box pl={2}>
+                                        <FormControlLabel control={<Switch color={"primary"}
+                                                                           onChange={x => setIsViewingMainList(!isViewingMainList)}/>}
+                                                          label="Show selected list"/>
+                                    </Box>
+                                </Grid>
+                                <Grid item>
+                                    {isViewingMainList ? null :
+                                        <Button color={"primary"} variant={"contained"} onClick={() => downloadAsFile({
+                                            data: stickiedCards.map(ele => ele.querySelector("span.cardTitle > a").innerHTML).join("\n"),
+                                            filename: 'stickied.txt'
+                                        })}>Download List</Button>
+                                    }
+                                </Grid>
+                            </Grid>
+                        </Box>
+                    </Paper>
+                </Box>
                 {isViewingMainList
                     ?
-                    <div ref={resultsViewRef} style={{height: `75vh`, overflow: "auto"}}>
+                    <div ref={resultsViewRef} style={{height: `90vh`, overflow: "auto"}}>
                         <div style={{height: `${resultsVirtualizer.totalSize}px`, width: "100%", position: "relative"}}>
                             {resultsVirtualizer.virtualItems.map(virtualRow => (
                                 <div key={virtualRow.index} ref={virtualRow.measureRef}
@@ -137,7 +159,7 @@ const MagicInfinite : React.FC<{}> = () => {
                         </div>
                     </div>
                     :
-                    <div ref={stickiedViewRef} style={{height: `75vh`, overflow: "auto"}}>
+                    <div ref={stickiedViewRef} style={{height: `90vh`, overflow: "auto"}}>
                         <div
                             style={{height: `${stickiedVirtualizer.totalSize}px`, width: "100%", position: "relative"}}>
                             {stickiedVirtualizer.virtualItems.map(virtualRow => (
@@ -164,32 +186,6 @@ const MagicInfinite : React.FC<{}> = () => {
             </>
         </ThemeProvider>
     );
-
-    function TopBarControl() {
-        return <Box pb={2}>
-            <Paper variant={"outlined"} elevation={0}>
-                <Box margin={1}>
-                    <Grid container>
-                        <Grid item>
-                            <Box pl={2}>
-                                <FormControlLabel control={<Switch color={"primary"}
-                                                                   onChange={x => setIsViewingMainList(!isViewingMainList)}/>}
-                                                  label="Show selected list"/>
-                            </Box>
-                        </Grid>
-                        <Grid item>
-                            {isViewingMainList ? null :
-                                <Button color={"primary"} variant={"contained"} onClick={() => downloadAsFile({
-                                    data: stickiedCards.map(ele => ele.querySelector("span.cardTitle > a").innerHTML).join("\n"),
-                                    filename: 'stickied.txt'
-                                })}>Download List</Button>
-                            }
-                        </Grid>
-                    </Grid>
-                </Box>
-            </Paper>
-        </Box>;
-    }
 };
 
 export default MagicInfinite;

@@ -1,9 +1,12 @@
 //One of the big sus parts of the project, lots of hard coded, id'd elements that I'm pretty sure will likely change
 export const setupMagicGathererSearchResultsPage: () => Element = () => {
-    const switcher : any = document.querySelector("#ctl00_ctl00_ctl00_MainContent_SubContent_SubContent_ctl00_switcher_switcher")
+    const isStandardSelected : any = document
+        .querySelector("#ctl00_ctl00_ctl00_MainContent_SubContent_SubContent_ctl00_switcher_switcher")
+        .querySelector('option[value="standard"]')
+        .getAttribute("selected")
 
     //We don't run for anything but the standard view
-    if(switcher.getValue() !== "standard")
+    if(!isStandardSelected)
         return;
 
     //Remove pagination as it isn't needed
